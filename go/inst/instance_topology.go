@@ -2171,6 +2171,7 @@ func IsBannedFromBeingCandidateReplica(replica *Instance) bool {
 
 func FilterInstancesNotInSameDataCenter(instances []*Instance, dataCenterHint string) []*Instance {
 	if dataCenterHint == "" {
+		log.Debug("No data center hint provided; unable to filter instances by data center")
 		return instances
 	}
 	var filtered []*Instance
@@ -2306,7 +2307,7 @@ func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool, forGra
 		return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, fmt.Errorf("No replicas found for %+v", *masterKey)
 	}
 	// In automatic failover cases, respect cross-datacenter failover configuration
-	if !forGracefulTakeoverPurposes && config.Config.RecoveryBlockCrossDatacenterFailovers && primary != nil && primary.DataCenter != "" {
+	if !forGracefulTakeoverPurposes && config.Config.RecoveryBlockCrossDatacenterFailovers && primary != nil {
 		replicas = FilterInstancesNotInSameDataCenter(replicas, primary.DataCenter)
 	}
 	candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err = chooseCandidateReplica(replicas)
