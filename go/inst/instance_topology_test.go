@@ -569,20 +569,3 @@ func TestChooseCandidateReplicaPromoteRuleOrdering3(t *testing.T) {
 	test.S(t).ExpectEquals(len(laterReplicas), 0)
 	test.S(t).ExpectEquals(len(cannotReplicateReplicas), 0)
 }
-
-// Tests that a primary in dc1 chooses the only other dc1 instance to failover to if cross-DC failovers are disabled
-func TestFilterInstancesNotInSameDataCenter(t *testing.T) {
-	instances, instancesMap := generateTestInstances()
-	applyGeneralGoodToGoReplicationParams(instances)
-	for _, instance := range instances {
-		instance.DataCenter = "dc2"
-	}
-
-	instancesMap[i710Key.StringCode()].DataCenter = "dc1"
-	instancesMap[i830Key.StringCode()].DataCenter = "dc1"
-
-	primary := instancesMap[i710Key.StringCode()]
-	config.Config.RecoveryBlockCrossDatacenterFailovers = true
-	candidates := FilterInstancesNotInSameDataCenter(instances, primary.DataCenter)
-	test.S(t).ExpectEquals(len(candidates), 2)
-}

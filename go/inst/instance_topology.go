@@ -2169,23 +2169,6 @@ func IsBannedFromBeingCandidateReplica(replica *Instance) bool {
 	return false
 }
 
-func FilterInstancesNotInSameDataCenter(instances []*Instance, dataCenterHint string) []*Instance {
-	if dataCenterHint == "" {
-		log.Warning("No data center hint provided; unable to filter instances by data center")
-		return instances
-	}
-	var filtered []*Instance
-	for _, instance := range instances {
-		if instance.DataCenter == dataCenterHint {
-			filtered = append(filtered, instance)
-		}
-	}
-	if len(filtered) > 0 {
-		return filtered
-	}
-	return instances
-}
-
 // getPriorityMajorVersionForCandidate returns the primary (most common) major version found
 // among given instances. This will be used for choosing best candidate for promotion.
 func getPriorityMajorVersionForCandidate(replicas [](*Instance)) (priorityMajorVersion string, err error) {
@@ -2306,16 +2289,15 @@ func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool, forGra
 	}
 	// In automatic failover cases, respect cross-datacenter failover configuration
 	AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("Graceful: %v, blocking cross DC failovers: %v in DC: %v", forGracefulTakeoverPurposes, config.Config.RecoveryBlockCrossDatacenterFailovers, dataCenterHint))
-	if !forGracefulTakeoverPurposes && config.Config.RecoveryBlockCrossDatacenterFailovers && dataCenterHint != "" {
-		filteredReplicas := FilterInstancesNotInSameDataCenter(replicas, dataCenterHint)
-		AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("filtered replicas to %d instances (from %d) in DC: %v", len(filteredReplicas), len(replicas), dataCenterHint))
-		replicas = filteredReplicas
-	}
 	candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err = chooseCandidateReplica(replicas)
 	if err != nil {
 		return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err
 	}
 	if candidateReplica != nil {
+		AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("Graceful: %v, should block cross DC failovers: %v in DC: %v", forGracefulTakeoverPurposes, config.Config.RecoveryBlockCrossDatacenterFailovers, dataCenterHint))
+		if dataCenterHint != "" && !forGracefulTakeoverPurposes && config.Config.RecoveryBlockCrossDatacenterFailovers && candidateReplica.DataCenter != dataCenterHint {
+			return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, fmt.Errorf("candidate replica %+v is in different data center (%v) than master %+v (%v), automatic failover blocked", candidateReplica.Key, candidateReplica.DataCenter, *masterKey, dataCenterHint)
+		}
 		mostUpToDateReplica := replicas[0]
 		if candidateReplica.ExecBinlogCoordinates.SmallerThan(&mostUpToDateReplica.ExecBinlogCoordinates) {
 			log.Warningf("GetCandidateReplica: chosen replica: %+v is behind most-up-to-date replica: %+v", candidateReplica.Key, mostUpToDateReplica.Key)
