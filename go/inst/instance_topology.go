@@ -2287,16 +2287,16 @@ func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool, forGra
 	if len(replicas) == 0 {
 		return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, fmt.Errorf("No replicas found for %+v", *masterKey)
 	}
-	// In automatic failover cases, respect cross-datacenter failover configuration
-	AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("Graceful: %v, blocking cross DC failovers: %v in DC: %v", forGracefulTakeoverPurposes, config.Config.RecoveryBlockCrossDatacenterFailovers, dataCenterHint))
 	candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err = chooseCandidateReplica(replicas)
 	if err != nil {
 		return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err
 	}
 	if candidateReplica != nil {
 		AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("Graceful: %v, should block cross DC failovers: %v in DC: %v", forGracefulTakeoverPurposes, config.Config.RecoveryBlockCrossDatacenterFailovers, dataCenterHint))
-		if dataCenterHint != "" && !forGracefulTakeoverPurposes && config.Config.RecoveryBlockCrossDatacenterFailovers && candidateReplica.DataCenter != dataCenterHint {
-			return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, fmt.Errorf("candidate replica %+v is in different data center (%v) than master %+v (%v), automatic failover blocked", candidateReplica.Key, candidateReplica.DataCenter, *masterKey, dataCenterHint)
+		// In automatic failover cases, respect cross-datacenter failover configuration
+		if !forGracefulTakeoverPurposes && config.Config.RecoveryBlockCrossDatacenterFailovers && dataCenterHint != "" && candidateReplica.DataCenter != dataCenterHint {
+			AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("Candidate replica %+v is in different data center (%v) than master %+v (%v), automatic failover blocked", candidateReplica.Key, candidateReplica.DataCenter, *masterKey, dataCenterHint))
+			return nil, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, fmt.Errorf("candidate replica %+v is in different data center (%v) than master %+v (%v), automatic failover blocked", candidateReplica.Key, candidateReplica.DataCenter, *masterKey, dataCenterHint)
 		}
 		mostUpToDateReplica := replicas[0]
 		if candidateReplica.ExecBinlogCoordinates.SmallerThan(&mostUpToDateReplica.ExecBinlogCoordinates) {
