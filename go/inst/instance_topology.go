@@ -2283,7 +2283,6 @@ func chooseCandidateReplica(replicas [](*Instance)) (candidateReplica *Instance,
 // GetCandidateReplica chooses the best replica to promote given a (possibly dead) master
 func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool, forGracefulTakeoverPurposes bool) (*Instance, [](*Instance), [](*Instance), [](*Instance), [](*Instance), error) {
 	var candidateReplica *Instance
-	var primary *Instance
 	aheadReplicas := [](*Instance){}
 	equalReplicas := [](*Instance){}
 	laterReplicas := [](*Instance){}
@@ -2291,7 +2290,6 @@ func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool, forGra
 
 	dataCenterHint := ""
 	if master, _, _ := ReadInstance(masterKey); master != nil {
-		primary = master
 		dataCenterHint = master.DataCenter
 	}
 	replicas, err := getReplicasForSorting(masterKey, false)
@@ -2308,8 +2306,8 @@ func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool, forGra
 	}
 	// In automatic failover cases, respect cross-datacenter failover configuration
 	AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("Graceful: %v, blocking cross DC failovers: %v in DC: %v", forGracefulTakeoverPurposes, config.Config.RecoveryBlockCrossDatacenterFailovers, dataCenterHint))
-	if !forGracefulTakeoverPurposes && config.Config.RecoveryBlockCrossDatacenterFailovers && primary != nil {
-		filteredReplicas := FilterInstancesNotInSameDataCenter(replicas, primary.DataCenter)
+	if !forGracefulTakeoverPurposes && config.Config.RecoveryBlockCrossDatacenterFailovers && dataCenterHint != "" {
+		filteredReplicas := FilterInstancesNotInSameDataCenter(replicas, dataCenterHint)
 		AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("filtered replicas to %d instances (from %d) in DC: %v", len(filteredReplicas), len(replicas), dataCenterHint))
 		replicas = filteredReplicas
 	}
