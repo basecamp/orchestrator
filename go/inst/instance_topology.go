@@ -2171,7 +2171,7 @@ func IsBannedFromBeingCandidateReplica(replica *Instance) bool {
 
 func FilterInstancesNotInSameDataCenter(instances []*Instance, dataCenterHint string) []*Instance {
 	if dataCenterHint == "" {
-		log.Debug("No data center hint provided; unable to filter instances by data center")
+		log.Warning("No data center hint provided; unable to filter instances by data center")
 		return instances
 	}
 	var filtered []*Instance

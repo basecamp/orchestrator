@@ -1,0 +1,6 @@
+[tools]
+go = "1.25.1"
+
+# Keep Go from auto switching toolchains
+[env]
+GOTOOLCHAIN = "local"
