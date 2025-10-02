@@ -2264,7 +2264,7 @@ func chooseCandidateReplica(replicas [](*Instance)) (candidateReplica *Instance,
 }
 
 // GetCandidateReplica chooses the best replica to promote given a (possibly dead) master
-func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool, forGracefulTakeoverPurposes bool) (*Instance, [](*Instance), [](*Instance), [](*Instance), [](*Instance), error) {
+func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool, isGraceful bool) (*Instance, [](*Instance), [](*Instance), [](*Instance), [](*Instance), error) {
 	var candidateReplica *Instance
 	aheadReplicas := [](*Instance){}
 	equalReplicas := [](*Instance){}
@@ -2292,9 +2292,9 @@ func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool, forGra
 		return candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err
 	}
 	if candidateReplica != nil {
-		AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("Graceful: %v, should block cross DC failovers: %v in DC: %v", forGracefulTakeoverPurposes, config.Config.RecoveryBlockCrossDatacenterFailovers, dataCenterHint))
+		AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("Graceful: %v, should block cross DC failovers: %v in DC: %v", isGraceful, config.Config.RecoveryBlockCrossDatacenterFailovers, dataCenterHint))
 		// In automatic failover cases, respect cross-datacenter failover configuration
-		if !forGracefulTakeoverPurposes && config.Config.RecoveryBlockCrossDatacenterFailovers && dataCenterHint != "" && candidateReplica.DataCenter != dataCenterHint {
+		if !isGraceful && config.Config.RecoveryBlockCrossDatacenterFailovers && dataCenterHint != "" && candidateReplica.DataCenter != dataCenterHint {
 			AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("Candidate replica %+v is in different data center (%v) than master %+v (%v), automatic failover blocked", candidateReplica.Key, candidateReplica.DataCenter, *masterKey, dataCenterHint))
 			return nil, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, fmt.Errorf("candidate replica %+v is in different data center (%v) than master %+v (%v), automatic failover blocked", candidateReplica.Key, candidateReplica.DataCenter, *masterKey, dataCenterHint)
 		}
@@ -2521,6 +2521,7 @@ func RegroupReplicasGTID(
 	masterKey *InstanceKey,
 	returnReplicaEvenOnFailureToRegroup bool,
 	startReplicationOnCandidate bool,
+	isGraceful bool,
 	onCandidateReplicaChosen func(*Instance),
 	postponedFunctionsContainer *PostponedFunctionsContainer,
 	postponeAllMatchOperations func(*Instance, bool) bool,
@@ -2533,7 +2534,7 @@ func RegroupReplicasGTID(
 ) {
 	var emptyReplicas [](*Instance)
 	var unmovedReplicas [](*Instance)
-	candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err := GetCandidateReplica(masterKey, true, false)
+	candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err := GetCandidateReplica(masterKey, true, isGraceful)
 	if err != nil {
 		if !returnReplicaEvenOnFailureToRegroup {
 			candidateReplica = nil
@@ -2603,7 +2604,7 @@ func RegroupReplicasBinlogServers(masterKey *InstanceKey, returnReplicaEvenOnFai
 
 // RegroupReplicas is a "smart" method of promoting one replica over the others ("promoting" it on top of its siblings)
 // This method decides which strategy to use: GTID, Pseudo-GTID, Binlog Servers.
-func RegroupReplicas(masterKey *InstanceKey, returnReplicaEvenOnFailureToRegroup bool,
+func RegroupReplicas(masterKey *InstanceKey, returnReplicaEvenOnFailureToRegroup bool, isGraceful bool,
 	onCandidateReplicaChosen func(*Instance),
 	postponedFunctionsContainer *PostponedFunctionsContainer) (
 
@@ -2643,7 +2644,7 @@ func RegroupReplicas(masterKey *InstanceKey, returnReplicaEvenOnFailureToRegroup
 	}
 	if allGTID {
 		log.Debugf("RegroupReplicas: using GTID to regroup replicas of %+v", *masterKey)
-		unmovedReplicas, movedReplicas, cannotReplicateReplicas, candidateReplica, err := RegroupReplicasGTID(masterKey, returnReplicaEvenOnFailureToRegroup, true, onCandidateReplicaChosen, nil, nil)
+		unmovedReplicas, movedReplicas, cannotReplicateReplicas, candidateReplica, err := RegroupReplicasGTID(masterKey, returnReplicaEvenOnFailureToRegroup, true, isGraceful, onCandidateReplicaChosen, nil, nil)
 		return unmovedReplicas, emptyReplicas, movedReplicas, cannotReplicateReplicas, candidateReplica, err
 	}
 	if allBinlogServers {
