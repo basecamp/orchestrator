@@ -2309,7 +2309,9 @@ func GetCandidateReplica(masterKey *InstanceKey, forRematchPurposes bool, forGra
 	// In automatic failover cases, respect cross-datacenter failover configuration
 	AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("Graceful: %v, blocking cross DC failovers: %v in DC: %v", forGracefulTakeoverPurposes, config.Config.RecoveryBlockCrossDatacenterFailovers, dataCenterHint))
 	if !forGracefulTakeoverPurposes && config.Config.RecoveryBlockCrossDatacenterFailovers && primary != nil {
-		replicas = FilterInstancesNotInSameDataCenter(replicas, primary.DataCenter)
+		filteredReplicas := FilterInstancesNotInSameDataCenter(replicas, primary.DataCenter)
+		AuditOperation("get-candidate-replica", masterKey, fmt.Sprintf("filtered replicas to %d instances (from %d) in DC: %v", len(filteredReplicas), len(replicas), dataCenterHint))
+		replicas = filteredReplicas
 	}
 	candidateReplica, aheadReplicas, equalReplicas, laterReplicas, cannotReplicateReplicas, err = chooseCandidateReplica(replicas)
 	if err != nil {
