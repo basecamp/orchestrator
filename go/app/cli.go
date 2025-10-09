@@ -267,7 +267,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			}
 			validateInstanceIsFound(instanceKey)
 
-			lostReplicas, equalReplicas, aheadReplicas, cannotReplicateReplicas, promotedReplica, err := inst.RegroupReplicas(instanceKey, false, func(candidateReplica *inst.Instance) { fmt.Println(candidateReplica.Key.DisplayString()) }, postponedFunctionsContainer)
+			lostReplicas, equalReplicas, aheadReplicas, cannotReplicateReplicas, promotedReplica, err := inst.RegroupReplicas(instanceKey, false, true, func(candidateReplica *inst.Instance) { fmt.Println(candidateReplica.Key.DisplayString()) }, postponedFunctionsContainer)
 			lostReplicas = append(lostReplicas, cannotReplicateReplicas...)
 
 			postponedFunctionsContainer.Wait()
@@ -387,7 +387,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 				log.Fatal("Cannot deduce instance:", instance)
 			}
 
-			instance, _, _, _, _, err := inst.GetCandidateReplica(instanceKey, false)
+			instance, _, _, _, _, err := inst.GetCandidateReplica(instanceKey, false, false)
 			if err != nil {
 				log.Fatale(err)
 			} else {
@@ -450,7 +450,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 			}
 			validateInstanceIsFound(instanceKey)
 
-			lostReplicas, movedReplicas, cannotReplicateReplicas, promotedReplica, err := inst.RegroupReplicasGTID(instanceKey, false, true, func(candidateReplica *inst.Instance) { fmt.Println(candidateReplica.Key.DisplayString()) }, postponedFunctionsContainer, nil)
+			lostReplicas, movedReplicas, cannotReplicateReplicas, promotedReplica, err := inst.RegroupReplicasGTID(instanceKey, false, true, true, func(candidateReplica *inst.Instance) { fmt.Println(candidateReplica.Key.DisplayString()) }, postponedFunctionsContainer, nil)
 			lostReplicas = append(lostReplicas, cannotReplicateReplicas...)
 
 			if promotedReplica == nil {
@@ -1474,7 +1474,7 @@ func Cli(command string, strict bool, instance string, destination string, owner
 				log.Fatal("Cannot deduce instance:", instance)
 			}
 
-			recoveryAttempted, promotedInstanceKey, err := logic.CheckAndRecover(instanceKey, destinationKey, (command == "recover-lite"))
+			recoveryAttempted, promotedInstanceKey, err := logic.CheckAndRecover(instanceKey, destinationKey, (command == "recover-lite"), true)
 			if err != nil {
 				log.Fatale(err)
 			}

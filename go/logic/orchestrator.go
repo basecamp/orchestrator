@@ -681,7 +681,7 @@ func ContinuousDiscovery() {
 							return
 						}
 						if runCheckAndRecoverOperationsTimeRipe() {
-							CheckAndRecover(nil, nil, false)
+							CheckAndRecover(nil, nil, false, false)
 						} else {
 							log.Debugf("Waiting for %+v seconds to pass before running failure detection/recovery", checkAndRecoverWaitPeriod.Seconds())
 						}

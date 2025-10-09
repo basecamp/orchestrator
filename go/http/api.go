@@ -1159,7 +1159,7 @@ func (this *HttpAPI) RegroupReplicas(params martini.Params, r render.Render, req
 		return
 	}
 
-	lostReplicas, equalReplicas, aheadReplicas, cannotReplicateReplicas, promotedReplica, err := inst.RegroupReplicas(&instanceKey, false, nil, nil)
+	lostReplicas, equalReplicas, aheadReplicas, cannotReplicateReplicas, promotedReplica, err := inst.RegroupReplicas(&instanceKey, false, true, nil, nil)
 	lostReplicas = append(lostReplicas, cannotReplicateReplicas...)
 	if err != nil {
 		Respond(r, &APIResponse{Code: ERROR, Message: err.Error()})
@@ -1207,7 +1207,7 @@ func (this *HttpAPI) RegroupReplicasGTID(params martini.Params, r render.Render,
 		return
 	}
 
-	lostReplicas, movedReplicas, cannotReplicateReplicas, promotedReplica, err := inst.RegroupReplicasGTID(&instanceKey, false, true, nil, nil, nil)
+	lostReplicas, movedReplicas, cannotReplicateReplicas, promotedReplica, err := inst.RegroupReplicasGTID(&instanceKey, false, true, true, nil, nil, nil)
 	lostReplicas = append(lostReplicas, cannotReplicateReplicas...)
 
 	if err != nil {
@@ -3237,7 +3237,7 @@ func (this *HttpAPI) Recover(params martini.Params, r render.Render, req *http.R
 	}
 
 	skipProcesses := (req.URL.Query().Get("skipProcesses") == "true") || (params["skipProcesses"] == "true")
-	recoveryAttempted, promotedInstanceKey, err := logic.CheckAndRecover(&instanceKey, candidateKey, skipProcesses)
+	recoveryAttempted, promotedInstanceKey, err := logic.CheckAndRecover(&instanceKey, candidateKey, skipProcesses, true)
 	if err != nil {
 		Respond(r, &APIResponse{Code: ERROR, Message: err.Error(), Details: instanceKey})
 		return
